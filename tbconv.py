@@ -16,7 +16,19 @@ accent = [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]
 step = [0,0,0,0,0]
 input_file = ""
 output_file = ""
-pFlag = False
+
+VERBOSE = False
+
+
+def vprint(lines, end='\n'):
+    """Print lines verbosely.
+    """
+    if not VERBOSE:
+        return
+    if isinstance(lines, str):
+        lines = [lines]
+    for line in lines:
+        print(line, end=end)
 
 
 def getMachineType(line):
@@ -59,7 +71,7 @@ def readParam(line, machine):
 
 
 def writeParams(machine):
-    global length, triplet, step, note, state, slide, accent, output_file, pFlag
+    global length, triplet, step, note, state, slide, accent, output_file
     if machine == 'TB-3':
         if length < 16:
             out_text1 = 'END_STEP\t= ' + str(length) + '\n'
@@ -86,19 +98,31 @@ def writeParams(machine):
 
         with open(output_file1, 'wt') as outf:
             outf.write(out_text1)
-            if pFlag == True:
-                print('\n----------\nOutput file:', output_file1, '\n----------\n')
-                print(out_text1)
+            vprint([
+                '',
+                '----------',
+                'Output file: {}'.format(output_file1),
+                '----------',
+                '',
+                out_text1,
+            ])
 
         if length > 15:
             ofn = output_file.split('.')
             output_file2 = ofn[0] + 'b.' + ofn[1]
             with open(output_file2, 'wt') as outf:
                 outf.write(out_text2)
-            if pFlag == True:
-                print('----------\nOutput file:', output_file2, '\n----------\n')
-                print(out_text2)
-                print('----------\n')
+
+            vprint([
+                '----------',
+                'Output file: {}'.format(output_file2),
+                '----------',
+                '',
+                out_text2,
+                '----------',
+                '',
+            ])
+
             print(output_file1, 'and', output_file2, 'are generated instead of ', output_file, \
                 ', because the pattern in', input_file, 'is longer than 16 steps.\n')
             
@@ -116,10 +140,18 @@ def writeParams(machine):
         out_text += 'PATCH(-1);\n'
         with open(output_file, 'wt') as outf:
             outf.write(out_text)
-            if pFlag == True:
-                print('\n----------\nOutput file:', output_file, '\n----------\n')
-                print(out_text)
-                print('----------\n')
+
+            vprint([
+                '',
+                '----------',
+                'Output file: {}'.format(output_file),
+                '----------',
+                '',
+                out_text,
+                '----------',
+                '',
+            ])
+
     print('Conversion complete.\n')
 
 
@@ -138,24 +170,26 @@ def main():
             print('Invalid file type.')
             exit()
 
-        print('Converting backup file from ', machine, ' to ', end='')
-        if machine == 'TB-3':
-            print('TB-03.\n')
-        else:
-            print('TB-3.\n')
+        convert_to = 'TB-03' if machine == 'TB-3' else 'TB-3'
+        print('Converting backup file from {} to {}\n'.format(machine, convert_to))
+
         readParam(line, machine)
 
-        if pFlag == True:
-            print('----------\nInput File:', input_file, '\n----------\n')
+        vprint([
+            '----------',
+            'Input File: {}'.format(input_file),
+            '----------',
+            '',
+        ])
+
         while True:
             line = prm.readline()
-            if pFlag == True:
-                print(line, end='')
+            vprint([line], end='')
             readParam(line, machine)
             if not line:
                 break
 
-        writeParams(machine)
+        writeParams(machine, input_file, output_file)
 
 
 if __name__ == '__main__':
@@ -178,6 +212,6 @@ if __name__ == '__main__':
 
     input_file = args.INPUT_FILE
     output_file = args.OUTPUT_FILE
-    pFlag = args.verbose
+    VERBOSE = args.verbose
 
-        main()
+    main()
