@@ -1,6 +1,9 @@
+# -*- coding: utf-8 -*-
+import argparse
 import re
 import sys
 import os.path
+
 
 machine = 'unknown'
 length = 16
@@ -23,6 +26,7 @@ def getMachineType(line):
         return 'TB-03'
     else:
         return 'unknown'
+
 
 def readParam(line, machine):
     global length, triplet, step, note, state, slide, accent
@@ -52,6 +56,7 @@ def readParam(line, machine):
         slide[index-1] = int(step[2])
         state[index-1] = int(not(int(step[3]))) # invert the value of step for TB-3
         accent[index-1] = int(step[4])
+
 
 def writeParams(machine):
     global length, triplet, step, note, state, slide, accent, output_file, pFlag
@@ -117,6 +122,7 @@ def writeParams(machine):
                 print('----------\n')
     print('Conversion complete.\n')
 
+
 def main():
     global input_file
 
@@ -151,27 +157,27 @@ def main():
 
         writeParams(machine)
 
-def getArgs():
-    global input_file, output_file, pFlag
-    arguments = sys.argv
-
-    if len(arguments) < 3 or len(arguments) > 4:
-        return False
-    if arguments[1].startswith('-') or arguments[2].startswith('-'):
-        print('-\n')
-        return False
-
-    input_file = arguments[1]
-    output_file = arguments[2]
-    if len(arguments) == 4:
-        if arguments[3] == '-p' or arguments[3] == '--print':
-            pFlag = True
-        else:
-            return False
-    return True
 
 if __name__ == '__main__':
-    if getArgs() == True:
+    parser = argparse.ArgumentParser()
+    parser.add_argument(
+        'INPUT_FILE',
+        help='File to convert.',
+    )
+    parser.add_argument(
+        'OUTPUT_FILE',
+        help='The result of file conversion.',
+    )
+    parser.add_argument(
+        '-p', '--print',
+        action='store_true',
+        dest='verbose',
+        help='Print input and output file.',
+    )
+    args = parser.parse_args()
+
+    input_file = args.INPUT_FILE
+    output_file = args.OUTPUT_FILE
+    pFlag = args.verbose
+
         main()
-    else:
-        print('Usage: python {} INPUT_FILE OUTPUT_FILE [--print]\n'.format(__file__))
