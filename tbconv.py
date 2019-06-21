@@ -189,7 +189,7 @@ def main():
             if not line:
                 break
 
-        writeParams(machine, input_file, output_file)
+        writeParams(machine)
 
 
 if __name__ == '__main__':
