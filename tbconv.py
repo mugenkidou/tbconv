@@ -1,6 +1,9 @@
+# -*- coding: utf-8 -*-
+import argparse
 import re
 import sys
 import os.path
+
 
 machine = 'unknown'
 length = 16
@@ -13,7 +16,19 @@ accent = [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]
 step = [0,0,0,0,0]
 input_file = ""
 output_file = ""
-pFlag = False
+
+VERBOSE = False
+
+
+def vprint(lines, end='\n'):
+    """Print lines verbosely.
+    """
+    if not VERBOSE:
+        return
+    if isinstance(lines, str):
+        lines = [lines]
+    for line in lines:
+        print(line, end=end)
 
 
 def getMachineType(line):
@@ -23,6 +38,7 @@ def getMachineType(line):
         return 'TB-03'
     else:
         return 'unknown'
+
 
 def readParam(line, machine):
     global length, triplet, step, note, state, slide, accent
@@ -53,8 +69,9 @@ def readParam(line, machine):
         state[index-1] = int(not(int(step[3]))) # invert the value of step for TB-3
         accent[index-1] = int(step[4])
 
+
 def writeParams(machine):
-    global length, triplet, step, note, state, slide, accent, output_file, pFlag
+    global length, triplet, step, note, state, slide, accent, output_file
     if machine == 'TB-3':
         if length < 16:
             out_text1 = 'END_STEP\t= ' + str(length) + '\n'
@@ -81,19 +98,31 @@ def writeParams(machine):
 
         with open(output_file1, 'wt') as outf:
             outf.write(out_text1)
-            if pFlag == True:
-                print('\n----------\nOutput file:', output_file1, '\n----------\n')
-                print(out_text1)
+            vprint([
+                '',
+                '----------',
+                'Output file: {}'.format(output_file1),
+                '----------',
+                '',
+                out_text1,
+            ])
 
         if length > 15:
             ofn = output_file.split('.')
             output_file2 = ofn[0] + 'b.' + ofn[1]
             with open(output_file2, 'wt') as outf:
                 outf.write(out_text2)
-            if pFlag == True:
-                print('----------\nOutput file:', output_file2, '\n----------\n')
-                print(out_text2)
-                print('----------\n')
+
+            vprint([
+                '----------',
+                'Output file: {}'.format(output_file2),
+                '----------',
+                '',
+                out_text2,
+                '----------',
+                '',
+            ])
+
             print(output_file1, 'and', output_file2, 'are generated instead of ', output_file, \
                 ', because the pattern in', input_file, 'is longer than 16 steps.\n')
             
@@ -111,11 +140,20 @@ def writeParams(machine):
         out_text += 'PATCH(-1);\n'
         with open(output_file, 'wt') as outf:
             outf.write(out_text)
-            if pFlag == True:
-                print('\n----------\nOutput file:', output_file, '\n----------\n')
-                print(out_text)
-                print('----------\n')
+
+            vprint([
+                '',
+                '----------',
+                'Output file: {}'.format(output_file),
+                '----------',
+                '',
+                out_text,
+                '----------',
+                '',
+            ])
+
     print('Conversion complete.\n')
+
 
 def main():
     global input_file
@@ -132,46 +170,48 @@ def main():
             print('Invalid file type.')
             exit()
 
-        print('Converting backup file from ', machine, ' to ', end='')
-        if machine == 'TB-3':
-            print('TB-03.\n')
-        else:
-            print('TB-3.\n')
+        convert_to = 'TB-03' if machine == 'TB-3' else 'TB-3'
+        print('Converting backup file from {} to {}\n'.format(machine, convert_to))
+
         readParam(line, machine)
 
-        if pFlag == True:
-            print('----------\nInput File:', input_file, '\n----------\n')
+        vprint([
+            '----------',
+            'Input File: {}'.format(input_file),
+            '----------',
+            '',
+        ])
+
         while True:
             line = prm.readline()
-            if pFlag == True:
-                print(line, end='')
+            vprint([line], end='')
             readParam(line, machine)
             if not line:
                 break
 
         writeParams(machine)
 
-def getArgs():
-    global input_file, output_file, pFlag
-    arguments = sys.argv
-
-    if len(arguments) < 3 or len(arguments) > 4:
-        return False
-    if arguments[1].startswith('-') or arguments[2].startswith('-'):
-        print('-\n')
-        return False
-
-    input_file = arguments[1]
-    output_file = arguments[2]
-    if len(arguments) == 4:
-        if arguments[3] == '-p' or arguments[3] == '--print':
-            pFlag = True
-        else:
-            return False
-    return True
 
 if __name__ == '__main__':
-    if getArgs() == True:
-        main()
-    else:
-        print('Usage: python {} INPUT_FILE OUTPUT_FILE [--print]\n'.format(__file__))
+    parser = argparse.ArgumentParser()
+    parser.add_argument(
+        'INPUT_FILE',
+        help='File to convert.',
+    )
+    parser.add_argument(
+        'OUTPUT_FILE',
+        help='The result of file conversion.',
+    )
+    parser.add_argument(
+        '-p', '--print',
+        action='store_true',
+        dest='verbose',
+        help='Print input and output file.',
+    )
+    args = parser.parse_args()
+
+    input_file = args.INPUT_FILE
+    output_file = args.OUTPUT_FILE
+    VERBOSE = args.verbose
+
+    main()
