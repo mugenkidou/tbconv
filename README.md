@@ -16,3 +16,18 @@ $ python tbconv.py INPUT_FILE OUTPUT_FILE [--print]
 * Length of TB-3 pattern may be longer than 16 steps, but TB-03's are not. In such case, `tbconv` generate separated two TB-03 files.  
 * Before use `tbconv`, please make any necessary backups of TB-3/03. 
 * To restore backup files to TB-3/03, see [owner's manual of them](https://www.roland.com/us/support/owners_manuals/t_z/).
+
+
+## Unittest
+
+1. If you have not installed pytest, please install it
+
+    ```
+    $ pip install -r test_requirements.txt
+    ```
+
+2. Run pytest
+
+    ```
+    $ pytest
+    ```
