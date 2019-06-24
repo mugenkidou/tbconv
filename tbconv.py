@@ -20,6 +20,83 @@ output_file = ""
 VERBOSE = False
 
 
+## for test
+#TODO: Remove global params
+
+# length
+def _set_length(val):
+    global length
+    length = val
+
+def _get_length():
+    return length
+
+# triplet
+def _set_triplet(val):
+    global triplet
+    triplet = val
+
+def _get_triplet():
+    return triplet
+
+# note
+def _set_note(val):
+    global note
+    note = val
+
+def _get_note():
+    return note
+
+# state
+def _set_state(val):
+    global state
+    state = val
+
+def _get_state():
+    return state
+
+# slide
+def _set_slide(val):
+    global slide
+    slide = val
+
+def _get_slide():
+    return slide
+
+# accent
+def _set_accent(val):
+    global accent
+    accent = val
+
+def _get_accent():
+    return accent
+
+# step
+def _set_step(val):
+    global step
+    step = val
+
+def _get_step():
+    return step
+
+# input_file
+def _set_input_file(val):
+    global input_file
+    input_file = val
+
+def _get_input_file():
+    return input_file
+
+# output_file
+def _set_output_file(val):
+    global output_file
+    output_file = val
+
+def _get_output_file():
+    return output_file
+
+####
+
 def vprint(lines, end='\n'):
     """Print lines verbosely.
     """
