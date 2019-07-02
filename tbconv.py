@@ -1,178 +1,137 @@
 # -*- coding: utf-8 -*-
 import argparse
+import enum
 import re
-import sys
 import os.path
 
-
-machine = 'unknown'
-length = 16
-triplet = 0
-note = [24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,\
-        24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24]
-state = [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]
-slide = [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]
-accent = [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]
-step = [0,0,0,0,0]
-input_file = ""
-output_file = ""
 
 VERBOSE = False
 
 
-## for test
-#TODO: Remove global params
+class Machine(enum.Enum):
+    """Machine types
+    """
+    TB3 = enum.auto()  # TB-3
+    TB03 = enum.auto()  # TB-03
+    UNKNOWN = enum.auto()
 
-# length
-def _set_length(val):
-    global length
-    length = val
 
-def _get_length():
-    return length
-
-# triplet
-def _set_triplet(val):
-    global triplet
-    triplet = val
-
-def _get_triplet():
-    return triplet
-
-# note
-def _set_note(val):
-    global note
-    note = val
-
-def _get_note():
-    return note
-
-# state
-def _set_state(val):
-    global state
-    state = val
-
-def _get_state():
-    return state
-
-# slide
-def _set_slide(val):
-    global slide
-    slide = val
-
-def _get_slide():
-    return slide
-
-# accent
-def _set_accent(val):
-    global accent
-    accent = val
-
-def _get_accent():
-    return accent
-
-# step
-def _set_step(val):
-    global step
-    step = val
-
-def _get_step():
-    return step
-
-# input_file
-def _set_input_file(val):
-    global input_file
-    input_file = val
-
-def _get_input_file():
-    return input_file
-
-# output_file
-def _set_output_file(val):
-    global output_file
-    output_file = val
-
-def _get_output_file():
-    return output_file
-
-####
-
-def vprint(lines, end='\n'):
+def vprint(lines, end='\n', verbose=None):
     """Print lines verbosely.
     """
-    if not VERBOSE:
+    if verbose is None:
+        verbose = VERBOSE
+    if not verbose:
         return
+
     if isinstance(lines, str):
         lines = [lines]
     for line in lines:
         print(line, end=end)
 
 
-def getMachineType(line):
+def get_machine_type(line):
+    """Detect machine type from first line of input file
+    """
     if line.startswith('TRIPLET'):
-         return 'TB-3'
+        return Machine.TB3
     elif line.startswith('END_'):
-        return 'TB-03'
+        return Machine.TB03
     else:
-        return 'unknown'
+        return Machine.UNKNOWN
 
 
-def readParam(line, machine):
-    global length, triplet, step, note, state, slide, accent
-
+def read_param(line, machine, length=16, triplet=0,
+               note=[], state=[], slide=[], accent=[]):
+    """Read one line and parse parameters.
+    """
     if line.startswith('END_'):
-        length = int(re.split('[\(\t= ]', line.strip('\);\n'))[-1])
+        length = int(re.split(r'[\(\t= ]', line.strip(');\n'))[-1])
 
     elif line.startswith('LAST'):
-        length = int(re.split('[\(\t= ]', line.strip('\);\n'))[-1])
+        length = int(re.split(r'[\(\t= ]', line.strip(');\n'))[-1])
 
     elif line.startswith('TRIPLET'):
-        triplet = int(re.split('[\(\t= ]', line.strip('\);\n'))[-1])
+        triplet = int(re.split(r'[\(\t= ]', line.strip(');\n'))[-1])
 
     elif line.startswith('STEP '):
-        step = line.replace('STEP ', '').replace('\t= STATE=',',').replace(' NOTE=',',').\
-            replace(' ACCENT=',',').replace(' SLIDE=',',').replace('\n','').split(',')
+        step = line.replace('STEP ', '')\
+                   .replace('\t= STATE=', ',')\
+                   .replace(' NOTE=', ',')\
+                   .replace(' ACCENT=', ',')\
+                   .replace(' SLIDE=', ',')\
+                   .replace('\n', '')\
+                   .split(',')
         index = int(step[0])
-        state[index-1] = int(not(int(step[1]))) # invert the value of step for TB-3
+        # invert the value of step for TB-3
+        state[index-1] = int(not(int(step[1])))
         note[index-1] = int(step[2])
         accent[index-1] = int(step[3])
         slide[index-1] = int(step[4])
 
     elif line.startswith('STEP'):
-        step = line.replace('STEP', '').replace('(',',').strip('\);\n').split(',')
+        step = line.replace('STEP', '')\
+                   .replace('(', ',')\
+                   .strip(');\n')\
+                   .split(',')
         index = int(step[0])
         note[index-1] = int(step[1])
         slide[index-1] = int(step[2])
-        state[index-1] = int(not(int(step[3]))) # invert the value of step for TB-3
+        # invert the value of step for TB-3
+        state[index-1] = int(not(int(step[3])))
         accent[index-1] = int(step[4])
 
+    return length, triplet, note, state, slide, accent
 
-def writeParams(machine):
-    global length, triplet, step, note, state, slide, accent, output_file
-    if machine == 'TB-3':
+
+def write_params(machine, output_file, length, triplet,
+                 note, state, slide, accent):
+    """Write pattern to output_file.
+    """
+    if machine == Machine.TB3:
+        out_lines_1 = []
+        out_lines_2 = []
+
+        # END_STEP
         if length < 16:
-            out_text1 = 'END_STEP\t= ' + str(length) + '\n'
+            out_lines_1.append('END_STEP\t= {}'.format(length))
             output_file1 = output_file
         else:
-            out_text1 = 'END_STEP\t= 15\n'
-            ofn = output_file.split('.')
-            output_file1 = ofn[0] + 'a.' + ofn[1]
-        out_text2 = 'END_STEP\t= ' + str(length-16) + '\n'
-        out_text2 += 'TRIPLET\t= ' + str(triplet) + '\n'
-        out_text1 += 'TRIPLET\t= ' + str(triplet) + '\n'
-        for index in range(16):
-            out_text1 += 'STEP ' + str(index+1) + \
-                    '\t= STATE=' + str(state[index]) + \
-                    ' NOTE=' + str(note[index]) + \
-                    ' ACCENT=' + str(accent[index]) + \
-                    ' SLIDE=' + str(slide[index]) + '\n'
-        for index in range(16,32):
-            out_text2 += 'STEP ' + str(index-15) + \
-                    '\t= STATE=' + str(state[index]) + \
-                    ' NOTE=' + str(note[index]) + \
-                    ' ACCENT=' + str(accent[index]) + \
-                    ' SLIDE=' + str(slide[index]) + '\n'
+            out_lines_1.append('END_STEP\t= 15')
 
+            # output_file name
+            ofn = output_file.split('.')
+            # TODO: check no '.'
+            output_file1 = '{}a.{}'.format(ofn[0], ofn[1])
+            output_file2 = '{}b.{}'.format(ofn[0], ofn[1])
+
+        out_lines_2.append('END_STEP\t= {}'.format(length - 16))
+
+        # TRIPLET
+        out_lines_1.append('TRIPLET\t= {}'.format(triplet))
+        out_lines_2.append('TRIPLET\t= {}'.format(triplet))
+
+        # STEPs
+        for index in range(16):
+            out_lines_1.append(
+                'STEP {}\t= STATE={} NOTE={} ACCENT={} SLIDE={}'.format(
+                    index + 1,
+                    state[index],
+                    note[index],
+                    accent[index],
+                    slide[index],
+                ))
+        for index in range(16, 32):
+            out_lines_2.append(
+                'STEP {}\t= STATE={} NOTE={} ACCENT={} SLIDE={}'.format(
+                    index - 15,
+                    state[index],
+                    note[index],
+                    accent[index],
+                    slide[index],
+                ))
+
+        out_text1 = '\n'.join(out_lines_1) + '\n'
         with open(output_file1, 'wt') as outf:
             outf.write(out_text1)
             vprint([
@@ -185,8 +144,7 @@ def writeParams(machine):
             ])
 
         if length > 15:
-            ofn = output_file.split('.')
-            output_file2 = ofn[0] + 'b.' + ofn[1]
+            out_text2 = '\n'.join(out_lines_2) + '\n'
             with open(output_file2, 'wt') as outf:
                 outf.write(out_text2)
 
@@ -200,21 +158,33 @@ def writeParams(machine):
                 '',
             ])
 
-            print(output_file1, 'and', output_file2, 'are generated instead of ', output_file, \
-                ', because the pattern in', input_file, 'is longer than 16 steps.\n')
-            
-    elif machine == 'TB-03':
-        out_text = 'TRIPLET(' + str(triplet) + ');\n'
-        out_text += 'LAST_STEP(' + str(length) + ');\n'
-        out_text += 'GATE_WIDTH(67);\n'
+            print((
+                '{} and {} are generated instead of {}, '
+                'because the pattern in input file is longer than 16 steps.\n'
+            ).format(
+                output_file1, output_file2, output_file,
+            ))
+
+    elif machine == Machine.TB03:
+        out_lines = []
+        out_lines.append('TRIPLET({});'.format(triplet))
+        out_lines.append('LAST_STEP({});'.format(length))
+        out_lines.append('GATE_WIDTH(67);')
+
         for index in range(32):
-            out_text += 'STEP' + str(index+1) + \
-                        '(' + str(note[index]) + \
-                        ',' + str(slide[index]) + \
-                        ',' + str(state[index]) + \
-                        ',' + str(accent[index]) + ');\n'
-        out_text += 'BANK(0);\n'
-        out_text += 'PATCH(-1);\n'
+            out_lines.append(
+                'STEP{}({},{},{},{});'.format(
+                    index+1,
+                    note[index],
+                    slide[index],
+                    state[index],
+                    accent[index],
+                ))
+
+        out_lines.append('BANK(0);')
+        out_lines.append('PATCH(-1);')
+
+        out_text = '\n'.join(out_lines) + '\n'
         with open(output_file, 'wt') as outf:
             outf.write(out_text)
 
@@ -226,31 +196,47 @@ def writeParams(machine):
                 '',
                 out_text,
                 '----------',
-                '',
+
             ])
 
-    print('Conversion complete.\n')
 
-
-def main():
-    global input_file
-
+def main(input_file, output_file):
     if not(os.path.exists(input_file)):
-        print('No such file: ', input_file)
-        exit()
+        print('No such file: {}'.format(input_file))
+        return
 
-    with open(input_file,"rt") as prm:
+    with open(input_file, "rt") as prm:
         line = prm.readline()
-        machine = getMachineType(line)
-        
-        if machine == 'unknown':
+        machine = get_machine_type(line)
+
+        if machine == Machine.UNKNOWN:
             print('Invalid file type.')
             exit()
 
-        convert_to = 'TB-03' if machine == 'TB-3' else 'TB-3'
-        print('Converting backup file from {} to {}\n'.format(machine, convert_to))
+        convert_to = Machine.TB03 if machine == Machine.TB3 else Machine.TB3
+        print('Converting backup file from {} to {}\n'.format(
+            machine.name, convert_to.name))
 
-        readParam(line, machine)
+        length = 16
+        triplet = 0
+        note = [
+            24, 24, 24, 24, 24, 24, 24, 24, 24, 24, 24, 24, 24, 24, 24, 24,
+            24, 24, 24, 24, 24, 24, 24, 24, 24, 24, 24, 24, 24, 24, 24, 24,
+        ]
+        state = [
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+        ]
+        slide = [
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+        ]
+        accent = [
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+        ]
+        length, triplet, note, state, slide, accent = read_param(
+            line, machine, length, triplet, note, state, slide, accent)
 
         vprint([
             '----------',
@@ -262,11 +248,15 @@ def main():
         while True:
             line = prm.readline()
             vprint([line], end='')
-            readParam(line, machine)
+            length, triplet, note, state, slide, accent = read_param(
+                line, machine, length, triplet, note, state, slide, accent)
             if not line:
                 break
 
-        writeParams(machine)
+        write_params(
+            machine, output_file, length, triplet, note, state, slide, accent)
+
+    print('Conversion complete.')
 
 
 if __name__ == '__main__':
@@ -291,4 +281,4 @@ if __name__ == '__main__':
     output_file = args.OUTPUT_FILE
     VERBOSE = args.verbose
 
-    main()
+    main(input_file, output_file)

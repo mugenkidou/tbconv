@@ -29,5 +29,5 @@ $ python tbconv.py INPUT_FILE OUTPUT_FILE [--print]
 2. Run pytest
 
     ```
-    $ pytest
+    $ pytest --flake8 --cov
     ```

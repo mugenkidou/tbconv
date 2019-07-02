@@ -4,212 +4,180 @@ from unittest import mock
 import pytest
 
 
-class TestGetMachineType(object):
-    """Test for getMachineType()
+class TestVprint(object):
+    """Test for vprint()
     """
     @pytest.fixture
     def target(self):
-        from tbconv import getMachineType
-        return getMachineType
+        import tbconv
+        return tbconv.vprint
+
+    def test_one_line(self, capsys, target):
+        lines = 'hoge'
+        end = '\n'
+
+        target(lines, end=end, verbose=True)
+
+        captured = capsys.readouterr()
+        assert captured.out == 'hoge\n'
+        assert captured.err == ''
+
+    def test_one_lines(self, capsys, target):
+        lines = ['hoge']
+        end = '\n'
+
+        target(lines, end=end, verbose=True)
+
+        captured = capsys.readouterr()
+        assert captured.out == 'hoge\n'
+        assert captured.err == ''
+
+    def test_lines(self, capsys, target):
+        lines = ['hoge', 'fuga']
+        end = '\n'
+
+        target(lines, end=end, verbose=True)
+
+        captured = capsys.readouterr()
+        assert captured.out == 'hoge\nfuga\n'
+        assert captured.err == ''
+
+    def test_end(self, capsys, target):
+        lines = ['hoge', 'fuga']
+        end = '*'
+
+        target(lines, end=end, verbose=True)
+
+        captured = capsys.readouterr()
+        assert captured.out == 'hoge*fuga*'
+        assert captured.err == ''
+
+
+class TestGetMachineType(object):
+    """Test for get_machine_type()
+    """
+    @property
+    def machine(self):
+        from tbconv import Machine
+        return Machine
+
+    @pytest.fixture
+    def target(self):
+        import tbconv
+        return tbconv.get_machine_type
 
     def test_tb3(self, target):
         line = 'TRIPLET(0);'
         result = target(line)
-        assert result == 'TB-3'
+        assert result == self.machine.TB3
 
     def test_tb03(self, target):
         line = 'END_STEP        = 7'
         result = target(line)
-        assert result == 'TB-03'
+        assert result == self.machine.TB03
 
     def test_unknown(self, target):
         line = 'LAST_STEP(15);'
         result = target(line)
-        assert result == 'unknown'
+        assert result == self.machine.UNKNOWN
 
 
-class GlobalParamsMixin(object):
+class ParamsMixin(object):
     @pytest.fixture(scope="function", autouse=True)
     def setup(self):
-        self.init_params()
+        self.input_file = "input_01.prm"
+        self.output_file = "output_01.prm"
 
-    def init_params(self):
-        """Initialize all global params.
-        """
-        self.set_length(16)
-        self.set_triplet(0)
-        self.set_note([
-            24, 24, 24, 24, 24, 24, 24, 24,
-            24, 24, 24, 24, 24, 24, 24, 24,
-            24, 24, 24, 24, 24, 24, 24, 24,
-            24, 24, 24, 24, 24, 24, 24, 24,
-        ])
-        self.set_state([
-            0, 0, 0, 0, 0, 0, 0, 0,
-            0, 0, 0, 0, 0, 0, 0, 0,
-            0, 0, 0, 0, 0, 0, 0, 0,
-            0, 0, 0, 0, 0, 0, 0, 0,
-        ])
-        self.set_slide([
-            0, 0, 0, 0, 0, 0, 0, 0,
-            0, 0, 0, 0, 0, 0, 0, 0,
-            0, 0, 0, 0, 0, 0, 0, 0,
-            0, 0, 0, 0, 0, 0, 0, 0,
-        ])
-        self.set_accent([
-            0, 0, 0, 0, 0, 0, 0, 0,
-            0, 0, 0, 0, 0, 0, 0, 0,
-            0, 0, 0, 0, 0, 0, 0, 0,
-            0, 0, 0, 0, 0, 0, 0, 0,
-        ])
-        self.set_input_file("input_01.prm")
-        self.set_output_file("output_01.prm")
+        self.length = 16
+        self.triplet = 0
 
-    # length
-    def set_length(self, val):
-        import tbconv
-        tbconv._set_length(val)
+        self.note = [
+            24, 24, 24, 24, 24, 24, 24, 24, 24, 24, 24, 24, 24, 24, 24, 24,
+            24, 24, 24, 24, 24, 24, 24, 24, 24, 24, 24, 24, 24, 24, 24, 24,
+        ]
+        self.state = [
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+        ]
+        self.slide = [
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+        ]
+        self.accent = [
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+        ]
 
-    def get_length(self):
-        import tbconv
-        return tbconv._get_length()
-
-    # triplet
-    def set_triplet(self, val):
-        import tbconv
-        return tbconv._set_triplet(val)
-
-    def get_triplet(self):
-        import tbconv
-        return tbconv._get_triplet()
-
-    # note
-    def set_note(self, val):
-        import tbconv
-        return tbconv._set_note(val)
-
-    def get_note(self):
-        import tbconv
-        return tbconv._get_note()
-
-    # state
-    def set_state(self, val):
-        import tbconv
-        return tbconv._set_state(val)
-
-    def get_state(self):
-        import tbconv
-        return tbconv._get_state()
-
-    # slide
-    def set_slide(self, val):
-        import tbconv
-        return tbconv._set_slide(val)
-
-    def get_slide(self):
-        import tbconv
-        return tbconv._get_slide()
-
-    # accent
-    def set_accent(self, val):
-        import tbconv
-        return tbconv._set_accent(val)
-
-    def get_accent(self):
-        import tbconv
-        return tbconv._get_accent()
-
-    # step
-    def set_step(self, val):
-        import tbconv
-        return tbconv._set_step(val)
-
-    def get_step(self):
-        import tbconv
-        return tbconv._get_step()
-
-    # input_file
-    def set_input_file(self, val):
-        import tbconv
-        return tbconv._set_input_file(val)
-
-    def get_input_file(self):
-        import tbconv
-        return tbconv._get_input_file()
-
-    # output_file
-    def set_output_file(self, val):
-        import tbconv
-        return tbconv._set_output_file(val)
-
-    def get_output_file(self):
-        import tbconv
-        return tbconv._get_output_file()
+    @property
+    def machine(self):
+        from tbconv import Machine
+        return Machine
 
 
-class TestReadParam(GlobalParamsMixin):
-    """Test for readParam()
+class TestReadParam(ParamsMixin):
+    """Test for read_param()
     """
     @pytest.fixture
     def target(self):
-        from tbconv import readParam
-        return readParam
+        import tbconv
+        return tbconv.read_param
 
     def test_end_length(self, target):
         line = 'END_STEP	= 7'
-        machine = 'unknown'
+        machine = self.machine.UNKNOWN
 
-        target(line, machine)
-        assert self.get_length() == 7
+        length, triplet, note, state, slide, accent = target(line, machine)
+        assert length == 7
 
     def test_last_length(self, target):
         line = 'LAST_STEP(15);'
-        machine = 'unknown'
+        machine = self.machine.UNKNOWN
 
-        target(line, machine)
-        assert self.get_length() == 15
+        length, triplet, note, state, slide, accent = target(line, machine)
+        assert length == 15
 
     def test_triplet_tb3(self, target):
         line = 'TRIPLET(2);'
-        machine = 'unknown'
+        machine = self.machine.UNKNOWN
 
-        target(line, machine)
-        assert self.get_triplet() == 2
+        length, triplet, note, state, slide, accent = target(line, machine)
+        assert triplet == 2
 
     def test_triplet_tb03(self, target):
         line = 'TRIPLET	= 3'
-        machine = 'unknown'
+        machine = self.machine.UNKNOWN
 
-        target(line, machine)
-        assert self.get_triplet() == 3
+        length, triplet, note, state, slide, accent = target(line, machine)
+        assert triplet == 3
 
     def test_steps_tb3(self, target):
         line = 'STEP8(48,2,1,3);'
-        machine = 'unknown'
+        machine = self.machine.UNKNOWN
 
-        target(line, machine)
-        assert self.get_step() == [
-            '8', '48', '2', '1', '3',
-        ]
-        assert self.get_note() == [
+        length, triplet, note, state, slide, accent = target(
+            line, machine,
+            note=self.note, state=self.state,
+            slide=self.slide, accent=self.accent,
+        )
+        assert note == [
             24, 24, 24, 24, 24, 24, 24, 48,
             24, 24, 24, 24, 24, 24, 24, 24,
             24, 24, 24, 24, 24, 24, 24, 24,
             24, 24, 24, 24, 24, 24, 24, 24,
         ]
-        assert self.get_slide() == [
+        assert slide == [
             0, 0, 0, 0, 0, 0, 0, 2,
             0, 0, 0, 0, 0, 0, 0, 0,
             0, 0, 0, 0, 0, 0, 0, 0,
             0, 0, 0, 0, 0, 0, 0, 0,
         ]
-        assert self.get_state() == [
+        assert state == [
             0, 0, 0, 0, 0, 0, 0, 0,
             0, 0, 0, 0, 0, 0, 0, 0,
             0, 0, 0, 0, 0, 0, 0, 0,
             0, 0, 0, 0, 0, 0, 0, 0,
         ]
-        assert self.get_accent() == [
+        assert accent == [
             0, 0, 0, 0, 0, 0, 0, 3,
             0, 0, 0, 0, 0, 0, 0, 0,
             0, 0, 0, 0, 0, 0, 0, 0,
@@ -218,31 +186,32 @@ class TestReadParam(GlobalParamsMixin):
 
     def test_steps_tb03(self, target):
         line = 'STEP 8	= STATE=1 NOTE=48 ACCENT=3 SLIDE=2'
-        machine = 'unknown'
+        machine = self.machine.UNKNOWN
 
-        target(line, machine)
-        assert self.get_step() == [
-            '8', '1', '48', '3', '2',
-        ]
-        assert self.get_note() == [
+        length, triplet, note, state, slide, accent = target(
+            line, machine,
+            note=self.note, state=self.state,
+            slide=self.slide, accent=self.accent,
+        )
+        assert note == [
             24, 24, 24, 24, 24, 24, 24, 48,
             24, 24, 24, 24, 24, 24, 24, 24,
             24, 24, 24, 24, 24, 24, 24, 24,
             24, 24, 24, 24, 24, 24, 24, 24,
         ]
-        assert self.get_slide() == [
+        assert slide == [
             0, 0, 0, 0, 0, 0, 0, 2,
             0, 0, 0, 0, 0, 0, 0, 0,
             0, 0, 0, 0, 0, 0, 0, 0,
             0, 0, 0, 0, 0, 0, 0, 0,
         ]
-        assert self.get_state() == [
+        assert state == [
             0, 0, 0, 0, 0, 0, 0, 0,
             0, 0, 0, 0, 0, 0, 0, 0,
             0, 0, 0, 0, 0, 0, 0, 0,
             0, 0, 0, 0, 0, 0, 0, 0,
         ]
-        assert self.get_accent() == [
+        assert accent == [
             0, 0, 0, 0, 0, 0, 0, 3,
             0, 0, 0, 0, 0, 0, 0, 0,
             0, 0, 0, 0, 0, 0, 0, 0,
@@ -250,30 +219,41 @@ class TestReadParam(GlobalParamsMixin):
         ]
 
 
-class TestWriteParams(GlobalParamsMixin):
-    """Test for wrtieParams()
+class TestWriteParams(ParamsMixin):
+    """Test for wrtie_params()
     """
     @pytest.fixture
     def target(self):
-        from tbconv import writeParams
-        return writeParams
+        import tbconv
+        return tbconv.write_params
 
     def test_unknown(self, target):
-        machine = 'unknown'
-
+        machine = self.machine.UNKNOWN
         m = mock.mock_open()
         with mock.patch('tbconv.open', m):
-            target(machine)
-        assert m.called == False
-        
+            target(
+                machine,
+                self.output_file,
+                self.length,
+                self.triplet,
+                self.note, self.state, self.slide, self.accent,
+            )
+        assert m.called is False
+
     def test_tb3_length_16(self, target):
-        self.set_length(16)
-        machine = 'TB-3'
+        machine = self.machine.TB3
+
         m = mock.mock_open()
         with mock.patch('tbconv.open', m):
-            target(machine)
+            target(
+                machine,
+                self.output_file,
+                self.length,
+                self.triplet,
+                self.note, self.state, self.slide, self.accent,
+            )
 
-        assert m.called == True
+        assert m.called is True
         assert m.call_count == 2
 
         args, kwargs = m.call_args_list[0]
@@ -330,13 +310,20 @@ class TestWriteParams(GlobalParamsMixin):
         assert kwargs == {}
 
     def test_tb3_length_15(self, target):
-        self.set_length(15)
-        machine = 'TB-3'
+        machine = self.machine.TB3
+        length = 15
+
         m = mock.mock_open()
         with mock.patch('tbconv.open', m):
-            target(machine)
+            target(
+                machine,
+                self.output_file,
+                length,
+                self.triplet,
+                self.note, self.state, self.slide, self.accent,
+            )
 
-        assert m.called == True
+        assert m.called is True
         assert m.call_count == 1
 
         args, kwargs = m.call_args_list[0]
@@ -367,13 +354,20 @@ class TestWriteParams(GlobalParamsMixin):
         assert kwargs == {}
 
     def test_tb3_length_14(self, target):
-        self.set_length(14)
-        machine = 'TB-3'
+        machine = self.machine.TB3
+        length = 14
+
         m = mock.mock_open()
         with mock.patch('tbconv.open', m):
-            target(machine)
+            target(
+                machine,
+                self.output_file,
+                length,
+                self.triplet,
+                self.note, self.state, self.slide, self.accent,
+            )
 
-        assert m.called == True
+        assert m.called is True
         assert m.call_count == 1
 
         args, kwargs = m.call_args_list[0]
@@ -404,13 +398,20 @@ class TestWriteParams(GlobalParamsMixin):
         assert kwargs == {}
 
     def test_tb03_length_16(self, target):
-        self.set_length(16)
-        machine = 'TB-03'
+        machine = self.machine.TB03
+        length = 16
+
         m = mock.mock_open()
         with mock.patch('tbconv.open', m):
-            target(machine)
+            target(
+                machine,
+                self.output_file,
+                length,
+                self.triplet,
+                self.note, self.state, self.slide, self.accent,
+            )
 
-        assert m.called == True
+        assert m.called is True
         assert m.call_count == 1
 
         args, kwargs = m.call_args_list[0]
@@ -456,3 +457,25 @@ class TestWriteParams(GlobalParamsMixin):
             'BANK(0);\n'
             'PATCH(-1);\n'
         )
+
+
+class TestMain(ParamsMixin):
+    """Test for main()
+    """
+    @pytest.fixture
+    def target(self):
+        import tbconv
+        return tbconv.main
+
+    def test_no_such_file(self, capsys, target):
+        m = mock.mock_open()
+        with mock.patch('os.path.exists') as m_exists:
+            with mock.patch('tbconv.open', m):
+                m_exists.return_value = False
+                target(self.input_file, self.output_file)
+
+        assert m.called is False
+
+        captured = capsys.readouterr()
+        assert captured.out == 'No such file: input_01.prm\n'
+        assert captured.err == ''
